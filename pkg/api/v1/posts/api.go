@@ -20,4 +20,5 @@ func (p *PostsAPI) Register(r *gin.RouterGroup) {
 	r.GET("/posts", p.ListPosts)
 	r.GET("/posts/:post_id", p.GetPost)
 	r.DELETE("/posts/:post_id", p.DeletePost)
+	r.PUT("/posts/:post_id", p.UpdatePost)
 }
