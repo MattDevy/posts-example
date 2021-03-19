@@ -1,6 +1,7 @@
 package posts
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -82,11 +83,12 @@ func Order(r *ListPostsRequest) func(db *gorm.DB) *gorm.DB {
 	}
 }
 
+func WithContext(c context.Context) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.WithContext(c)
+	}
+}
 func (p *PostsAPI) ListPosts(c *gin.Context) {
-	// Pass the request context to the database, so we cancel the query if the request is cancelled (closed)
-	ctx := c.Request.Context()
-	db := p.db.WithContext(ctx)
-
 	// Get the parameters
 	req := &ListPostsRequest{}
 	if err := c.BindQuery(req); err != nil {
@@ -96,9 +98,10 @@ func (p *PostsAPI) ListPosts(c *gin.Context) {
 
 	// Find the total number of results
 	var count int64
-	if err := db.Scopes(
+	if err := p.db.Scopes(
 		StartTime(req),
 		EndTime(req),
+		WithContext(c.Request.Context()),
 	).Find(&models.Post{}).Count(&count).Error; err != nil {
 		c.Status(http.StatusBadRequest)
 		return
@@ -107,11 +110,12 @@ func (p *PostsAPI) ListPosts(c *gin.Context) {
 	// Do the request
 	var offset int
 	resultsArr := make([]models.Post, 0, req.PageSize)
-	if err := db.Scopes(
+	if err := p.db.Scopes(
 		Paginate(req, &offset),
 		StartTime(req),
 		EndTime(req),
 		Order(req),
+		WithContext(c.Request.Context()),
 	).Find(&resultsArr).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, ListPostsResponse{Error: err})
 		return
