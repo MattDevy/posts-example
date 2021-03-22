@@ -1,13 +1,13 @@
 package posts
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/MattDevy/posts-example/pkg/models"
+	"github.com/MattDevy/posts-example/pkg/otgorm"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -83,11 +83,6 @@ func Order(r *ListPostsRequest) func(db *gorm.DB) *gorm.DB {
 	}
 }
 
-func WithContext(c context.Context) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.WithContext(c)
-	}
-}
 func (p *PostsAPI) ListPosts(c *gin.Context) {
 	// Get the parameters
 	req := &ListPostsRequest{}
@@ -101,8 +96,8 @@ func (p *PostsAPI) ListPosts(c *gin.Context) {
 	if err := p.db.Scopes(
 		StartTime(req),
 		EndTime(req),
-		WithContext(c.Request.Context()),
-	).Find(&models.Post{}).Count(&count).Error; err != nil {
+		otgorm.WithSpanFromContext(c.Request.Context()),
+	).Model(&models.Post{}).Count(&count).Error; err != nil {
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -115,7 +110,7 @@ func (p *PostsAPI) ListPosts(c *gin.Context) {
 		StartTime(req),
 		EndTime(req),
 		Order(req),
-		WithContext(c.Request.Context()),
+		otgorm.WithSpanFromContext(c.Request.Context()),
 	).Find(&resultsArr).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, ListPostsResponse{Error: err})
 		return

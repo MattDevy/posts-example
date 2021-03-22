@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/MattDevy/posts-example/pkg/models"
+	"github.com/MattDevy/posts-example/pkg/otgorm"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,7 +17,9 @@ func (p *PostsAPI) GetPost(c *gin.Context) {
 	}
 	post := &models.Post{}
 
-	if err := p.db.First(post, uint(postID)).Error; err != nil {
+	if err := p.db.Scopes(
+		otgorm.WithSpanFromContext(c.Request.Context()),
+	).First(post, uint(postID)).Error; err != nil {
 		c.Status(http.StatusNotFound)
 		return
 	}
