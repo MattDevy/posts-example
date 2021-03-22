@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// Post holds all the metadata and content of a post
 type Post struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`
@@ -15,6 +16,7 @@ type Post struct {
 	PostData `json:",flow"`
 }
 
+// PostData includes all the user-editable fields
 type PostData struct {
 	Title  *string `json:"title"`
 	Author *string `json:"author"`

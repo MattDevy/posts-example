@@ -9,6 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// UpdatePost will update any non-null fields
+// This will only include editable fields of the models.Post
 func (p *PostsAPI) UpdatePost(c *gin.Context) {
 	postID, err := strconv.Atoi(c.Param("post_id"))
 	if err != nil {
@@ -20,8 +22,8 @@ func (p *PostsAPI) UpdatePost(c *gin.Context) {
 		return
 	}
 
+	// Update the post
 	updatedPost := &models.Post{ID: uint(postID)}
-	// Update
 	if err := p.db.Scopes(
 		otgorm.WithSpanFromContext(c.Request.Context()),
 	).Model(updatedPost).Updates(post).Error; err != nil {
@@ -29,7 +31,7 @@ func (p *PostsAPI) UpdatePost(c *gin.Context) {
 		return
 	}
 
-	// Get data
+	// Get the post
 	if err := p.db.Scopes(
 		otgorm.WithSpanFromContext(c.Request.Context()),
 	).First(updatedPost, postID).Error; err != nil {
@@ -37,5 +39,6 @@ func (p *PostsAPI) UpdatePost(c *gin.Context) {
 		return
 	}
 
+	// Write back the complete post, with fields updated
 	c.JSON(http.StatusOK, updatedPost)
 }
