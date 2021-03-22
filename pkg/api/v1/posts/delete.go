@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/MattDevy/posts-example/pkg/models"
-	"github.com/MattDevy/posts-example/pkg/otgorm"
+	"github.com/MattDevy/posts-example/pkg/scopes"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,7 +17,7 @@ func (p *PostsAPI) DeletePost(c *gin.Context) {
 	}
 
 	if err := p.db.Scopes(
-		otgorm.WithSpanFromContext(c.Request.Context()),
+		scopes.WithSpanFromContext(c.Request.Context()),
 	).Delete(&models.Post{}, uint(imageID)).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return

@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/MattDevy/posts-example/pkg/models"
-	"github.com/MattDevy/posts-example/pkg/otgorm"
+	"github.com/MattDevy/posts-example/pkg/scopes"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,7 +25,7 @@ func (p *PostsAPI) CreatePost(c *gin.Context) {
 	}
 
 	if err := p.db.Scopes(
-		otgorm.WithSpanFromContext(c.Request.Context()),
+		scopes.WithSpanFromContext(c.Request.Context()),
 	).Create(post).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, CreatePostResponse{Error: err})
 		return

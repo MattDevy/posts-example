@@ -3,17 +3,15 @@ package posts
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/MattDevy/posts-example/pkg/models"
-	"github.com/MattDevy/posts-example/pkg/otgorm"
+	"github.com/MattDevy/posts-example/pkg/scopes"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 const (
-	MAX_PAGE_SIZE int32 = 50
+	MAX_PAGE_SIZE int = 50
 )
 
 type ListPostsRequest struct {
@@ -31,58 +29,6 @@ type ListPostsResponse struct {
 	Error         error         `json:"error,omitempty"`
 }
 
-// Paginate gets the relevant information from the request and attaches it to the database query
-func Paginate(r *ListPostsRequest, Offset *int) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		pageSize := MAX_PAGE_SIZE
-		if r.PageSize > 0 && r.PageSize < MAX_PAGE_SIZE {
-			pageSize = r.PageSize
-		}
-		db = db.Limit(int(pageSize))
-
-		if r.PageToken != "" {
-			offset, err := strconv.Atoi(r.PageToken)
-			if err != nil {
-				db.AddError(err)
-				return db
-			}
-			db = db.Offset(offset)
-			*Offset = offset
-		}
-
-		return db
-	}
-}
-
-func StartTime(r *ListPostsRequest) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		if !r.StartTime.IsZero() {
-			return db.Where("created_at > ?", r.StartTime)
-		}
-		return db
-	}
-}
-
-func EndTime(r *ListPostsRequest) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		if !r.EndTime.IsZero() {
-			return db.Where("created_at <= ?", r.EndTime)
-		}
-		return db
-	}
-}
-
-func Order(r *ListPostsRequest) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		switch r.OrderBy {
-		case "", "created_at":
-			return db.Order("created_at desc")
-		default:
-			return db
-		}
-	}
-}
-
 func (p *PostsAPI) ListPosts(c *gin.Context) {
 	// Get the parameters
 	req := &ListPostsRequest{}
@@ -94,9 +40,9 @@ func (p *PostsAPI) ListPosts(c *gin.Context) {
 	// Find the total number of results
 	var count int64
 	if err := p.db.Scopes(
-		StartTime(req),
-		EndTime(req),
-		otgorm.WithSpanFromContext(c.Request.Context()),
+		scopes.StartTime(req.StartTime),
+		scopes.EndTime(req.EndTime),
+		scopes.WithSpanFromContext(c.Request.Context()),
 	).Model(&models.Post{}).Count(&count).Error; err != nil {
 		c.Status(http.StatusBadRequest)
 		return
@@ -106,11 +52,11 @@ func (p *PostsAPI) ListPosts(c *gin.Context) {
 	var offset int
 	resultsArr := make([]models.Post, 0, req.PageSize)
 	if err := p.db.Scopes(
-		Paginate(req, &offset),
-		StartTime(req),
-		EndTime(req),
-		Order(req),
-		otgorm.WithSpanFromContext(c.Request.Context()),
+		scopes.Paginate(int(req.PageSize), MAX_PAGE_SIZE, req.PageToken, &offset),
+		scopes.StartTime(req.StartTime),
+		scopes.EndTime(req.EndTime),
+		scopes.Order(req.OrderBy),
+		scopes.WithSpanFromContext(c.Request.Context()),
 	).Find(&resultsArr).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, ListPostsResponse{Error: err})
 		return
